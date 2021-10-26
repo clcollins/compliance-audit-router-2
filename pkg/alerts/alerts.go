@@ -17,6 +17,17 @@ type ProcessResponse struct {
 	Body       string
 }
 
+type Alert struct {
+	//  convert time strings to time.Date
+	FirstEvent string
+	LastEvent  string
+	ClusterID  string
+	UserName   string
+	Summary    string
+	SessionID  string
+	Raw        string
+}
+
 var failedResponse = ProcessResponse{StatusCode: http.StatusInternalServerError, Body: "Failed processing webhook"}
 
 // ProcessAlert receives an alert webhook and handles the logic of looking up the alert and handling it
@@ -106,15 +117,4 @@ func ProcessAlert(r *http.Request) (ProcessResponse, error) {
 	)
 
 	return ProcessResponse{StatusCode: http.StatusOK, Body: "Processed"}, err
-}
-
-type Alert struct {
-	//  convert time strings to time.Date
-	FirstEvent string
-	LastEvent  string
-	ClusterID  string
-	UserName   string
-	Summary    string
-	SessionID  string
-	Raw        string
 }
