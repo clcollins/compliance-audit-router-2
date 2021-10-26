@@ -7,7 +7,8 @@ import (
 	"net/url"
 
 	"github.com/gorilla/mux"
-	"github.com/openshift/compliance-audit-router/pkg/alerts"
+	"github.com/openshift/compliance-audit-router/pkg/config"
+	"github.com/openshift/compliance-audit-router/pkg/processor"
 )
 
 // Handler defines an HTTP route handler
@@ -22,8 +23,26 @@ type Listener struct {
 	HandlerFunc http.HandlerFunc
 }
 
-func CreateListener(path string, methods []string, handlerFunc http.HandlerFunc, verbose bool) Handler {
-	if verbose {
+var Listeners = []Listener{
+	{
+		Path:        "/readyz",
+		Methods:     []string{http.MethodGet},
+		HandlerFunc: http.HandlerFunc(LogAndRespondOKHandler),
+	},
+	{
+		Path:        "/healthz",
+		Methods:     []string{http.MethodGet},
+		HandlerFunc: http.HandlerFunc(LogAndRespondOKHandler),
+	},
+	{
+		Path:        "/api/v1/alert",
+		Methods:     []string{http.MethodPost},
+		HandlerFunc: http.HandlerFunc(ProcessAlertHandler),
+	},
+}
+
+func CreateListener(path string, methods []string, handlerFunc http.HandlerFunc) Handler {
+	if config.AppConfig.Verbose {
 		log.Println("enabling endpoint", path, methods)
 	}
 
@@ -46,12 +65,13 @@ func (h Handler) AddRoute(r *mux.Router) {
 
 func RequestLogger(r *http.Request) {
 	log.Println(r.RemoteAddr, r.Method, r.RequestURI)
-	// TODO: remove this debug
-	b, err := ioutil.ReadAll(r.Body)
-	if err != nil {
-		log.Println(err)
+	if config.AppConfig.Verbose {
+		b, err := ioutil.ReadAll(r.Body)
+		if err != nil {
+			log.Println(err)
+		}
+		log.Println(string(b))
 	}
-	log.Println(string(b))
 }
 
 func LogAndRespondOKHandler(w http.ResponseWriter, r *http.Request) {
@@ -61,9 +81,8 @@ func LogAndRespondOKHandler(w http.ResponseWriter, r *http.Request) {
 }
 
 func ProcessAlertHandler(w http.ResponseWriter, r *http.Request) {
-	// fmt.Println("got here")
 	RequestLogger(r)
-	resp, err := alerts.ProcessAlert(r)
+	resp, err := processor.ProcessAlert(r)
 	if err != nil {
 		log.Println(err)
 	}

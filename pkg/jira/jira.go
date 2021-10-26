@@ -1,5 +1,5 @@
 package jira
 
-func CreateTicket(time, user, manager, clusterID, summary, sessionID, rawAlert string) error {
+func CreateTicket(user, manager, time, clusterID, summary, sessionID, rawAlert string) error {
 	return nil
 }
