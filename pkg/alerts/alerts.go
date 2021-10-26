@@ -13,5 +13,6 @@ type Alert struct {
 	UserName   string
 	Summary    string
 	SessionID  string
+	SearchID   string
 	Raw        string
 }

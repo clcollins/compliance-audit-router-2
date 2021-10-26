@@ -11,6 +11,8 @@ import (
 	"github.com/openshift/compliance-audit-router/pkg/listeners"
 )
 
+var portString = ":" + fmt.Sprint(config.AppConfig.ListenPort)
+
 func main() {
 	r := mux.NewRouter()
 
@@ -18,7 +20,6 @@ func main() {
 		listeners.CreateListener(listener.Path, listener.Methods, listener.HandlerFunc).AddRoute(r)
 	}
 
-	portString := ":" + fmt.Sprint(config.AppConfig.ListenPort)
 	log.Printf("Listening on %s", portString)
 	log.Fatal(http.ListenAndServe(portString, r))
 }

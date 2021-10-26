@@ -82,11 +82,13 @@ func LogAndRespondOKHandler(w http.ResponseWriter, r *http.Request) {
 
 func ProcessAlertHandler(w http.ResponseWriter, r *http.Request) {
 	RequestLogger(r)
-	resp, err := processor.ProcessAlert(r)
+	err := processor.ProcessAlert(r)
 	if err != nil {
 		log.Println(err)
+		w.WriteHeader(http.StatusInternalServerError)
+		w.Write([]byte("Failed to process webhook"))
 	}
 
-	w.WriteHeader(resp.StatusCode)
-	w.Write([]byte(resp.Body))
+	w.WriteHeader(http.StatusOK)
+	w.Write([]byte("Processed"))
 }
