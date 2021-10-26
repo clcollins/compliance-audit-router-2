@@ -1,53 +1,24 @@
 package main
 
 import (
-	"flag"
+	"fmt"
 	"log"
 	"net/http"
 
 	"github.com/gorilla/mux"
 
-	"github.com/openshift/compliance-audit-router/pkg/infoLog"
+	"github.com/openshift/compliance-audit-router/pkg/config"
 	"github.com/openshift/compliance-audit-router/pkg/listeners"
 )
 
-const (
-	listenPort = ":8080"
-)
-
-var verbose bool
-
-var l = []listeners.Listener{
-	{
-		Path:        "/readyz",
-		Methods:     []string{http.MethodGet},
-		HandlerFunc: http.HandlerFunc(listeners.LogAndRespondOKHandler),
-	},
-	{
-		Path:        "/healthz",
-		Methods:     []string{http.MethodGet},
-		HandlerFunc: http.HandlerFunc(listeners.LogAndRespondOKHandler),
-	},
-	{
-		Path:        "/api/v1/alert",
-		Methods:     []string{http.MethodPost},
-		HandlerFunc: http.HandlerFunc(listeners.ProcessAlertHandler),
-	},
-}
-
-func init() {
-	flag.BoolVar(&verbose, "v", false, "Enable verbose logging")
-}
-
 func main() {
-	flag.Parse()
-
 	r := mux.NewRouter()
 
-	for _, listener := range l {
-		listeners.CreateListener(listener.Path, listener.Methods, listener.HandlerFunc, verbose).AddRoute(r)
+	for _, listener := range listeners.Listeners {
+		listeners.CreateListener(listener.Path, listener.Methods, listener.HandlerFunc).AddRoute(r)
 	}
 
-	infoLog.Logger.Printf("Listening on %s", listenPort)
-	log.Fatal(http.ListenAndServe(listenPort, r))
+	portString := ":" + fmt.Sprint(config.AppConfig.ListenPort)
+	log.Printf("Listening on %s", portString)
+	log.Fatal(http.ListenAndServe(portString, r))
 }
