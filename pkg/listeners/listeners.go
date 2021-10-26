@@ -1,13 +1,13 @@
 package listeners
 
 import (
+	"io/ioutil"
 	"log"
 	"net/http"
 	"net/url"
 
 	"github.com/gorilla/mux"
 	"github.com/openshift/compliance-audit-router/pkg/alerts"
-	"github.com/openshift/compliance-audit-router/pkg/infoLog"
 )
 
 // Handler defines an HTTP route handler
@@ -45,7 +45,13 @@ func (h Handler) AddRoute(r *mux.Router) {
 }
 
 func RequestLogger(r *http.Request) {
-	infoLog.Logger.Println(r.RemoteAddr, r.Method, r.RequestURI)
+	log.Println(r.RemoteAddr, r.Method, r.RequestURI)
+	// TODO: remove this debug
+	b, err := ioutil.ReadAll(r.Body)
+	if err != nil {
+		log.Println(err)
+	}
+	log.Println(string(b))
 }
 
 func LogAndRespondOKHandler(w http.ResponseWriter, r *http.Request) {
@@ -55,6 +61,7 @@ func LogAndRespondOKHandler(w http.ResponseWriter, r *http.Request) {
 }
 
 func ProcessAlertHandler(w http.ResponseWriter, r *http.Request) {
+	// fmt.Println("got here")
 	RequestLogger(r)
 	resp, err := alerts.ProcessAlert(r)
 	if err != nil {
