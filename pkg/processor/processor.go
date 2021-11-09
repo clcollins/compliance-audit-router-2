@@ -21,15 +21,7 @@ func ProcessAlert(r *http.Request) error {
 		return err
 	}
 
-	err = jira.CreateTicket(
-		user,
-		manager,
-		searchResults.FirstEvent,
-		searchResults.ClusterID,
-		searchResults.Summary,
-		searchResults.SessionID,
-		searchResults.Raw,
-	)
+	err = jira.CreateTicket(user, manager, searchResults)
 
 	if err != nil {
 		return err

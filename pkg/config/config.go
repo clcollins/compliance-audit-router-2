@@ -1,6 +1,7 @@
 package config
 
 import (
+	"fmt"
 	"log"
 	"os"
 
@@ -16,6 +17,42 @@ var defaultMessageTemplate = "{{.Username}} and {{.Manager}}\n\n" +
 	"Please provide the justification in the comments section below."
 
 var AppConfig Config
+
+type Config struct {
+	Verbose         bool
+	ListenPort      int
+	MessageTemplate string
+
+	LDAPConfig   LDAPConfig
+	SplunkConfig SplunkConfig
+	JiraConfig   JiraConfig
+}
+
+type LDAPConfig struct {
+	Host               string
+	Port               int
+	InsecureSkipVerify bool
+	Username           string
+	Password           string
+	SearchBase         string
+	Scope              string
+	Attributes         []string
+}
+
+type SplunkConfig struct {
+	Host          string
+	Port          int
+	AllowInsecure bool
+}
+
+type JiraConfig struct {
+	Host          string
+	Port          int
+	AllowInsecure bool
+	Username      string
+	Password      string
+	Project       string
+}
 
 func init() {
 
@@ -41,6 +78,7 @@ func init() {
 	viper.SetDefault("MessageTemplate", defaultMessageTemplate)
 	viper.SetDefault("Verbose", true)
 	viper.SetDefault("ListenPort", 8080)
+	viper.SetDefault("LDAPConfig.Port", 636)
 
 	err = viper.Unmarshal(&AppConfig)
 	if err != nil {
@@ -49,35 +87,6 @@ func init() {
 
 }
 
-type Config struct {
-	Verbose         bool
-	ListenPort      int
-	MessageTemplate string
-
-	LDAPConfig   LDAPConfig
-	SplunkConfig SplunkConfig
-	JiraConfig   JiraConfig
-}
-
-type LDAPConfig struct {
-	Host       string
-	Port       int
-	SearchBase string
-	Scope      string
-	attributes []string
-}
-
-type SplunkConfig struct {
-	Host          string
-	Port          int
-	AllowInsecure bool
-}
-
-type JiraConfig struct {
-	Host          string
-	Port          int
-	AllowInsecure bool
-	Username      string
-	Password      string
-	Project       string
+func GetLDAPAddr() string {
+	return AppConfig.LDAPConfig.Host + ":" + fmt.Sprint(AppConfig.LDAPConfig.Port)
 }

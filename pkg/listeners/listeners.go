@@ -87,8 +87,8 @@ func ProcessAlertHandler(w http.ResponseWriter, r *http.Request) {
 		log.Println(err)
 		w.WriteHeader(http.StatusInternalServerError)
 		w.Write([]byte("Failed to process webhook"))
+	} else {
+		w.WriteHeader(http.StatusOK)
+		w.Write([]byte("Processed"))
 	}
-
-	w.WriteHeader(http.StatusOK)
-	w.Write([]byte("Processed"))
 }
