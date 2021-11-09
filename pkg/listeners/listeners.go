@@ -71,6 +71,7 @@ func RequestLogger(r *http.Request) {
 func LogAndRespondOKHandler(w http.ResponseWriter, r *http.Request) {
 	RequestLogger(r)
 	w.WriteHeader(http.StatusOK)
+	w.Header().Set("Content-Type", "text/plain")
 	w.Write([]byte("OK"))
 }
 
@@ -80,9 +81,12 @@ func ProcessAlertHandler(w http.ResponseWriter, r *http.Request) {
 	if err != nil {
 		log.Println(err)
 		w.WriteHeader(http.StatusInternalServerError)
+		w.Header().Set("Content-Type", "text/plain")
 		w.Write([]byte("Failed to process webhook"))
+		w.Write([]byte("OK"))
 	} else {
 		w.WriteHeader(http.StatusOK)
+		w.Header().Set("Content-Type", "text/plain")
 		w.Write([]byte("Processed"))
 	}
 }
