@@ -4,7 +4,6 @@ import (
 	"io/ioutil"
 	"log"
 	"net/http"
-	"net/url"
 
 	"github.com/gorilla/mux"
 	"github.com/openshift/compliance-audit-router/pkg/config"
@@ -44,11 +43,6 @@ var Listeners = []Listener{
 func CreateListener(path string, methods []string, handlerFunc http.HandlerFunc) Handler {
 	if config.AppConfig.Verbose {
 		log.Println("enabling endpoint", path, methods)
-	}
-
-	_, err := url.ParseRequestURI(path)
-	if err != nil {
-		log.Panic(err)
 	}
 
 	return Handler{
