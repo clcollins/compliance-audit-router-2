@@ -36,7 +36,7 @@ var Listeners = []Listener{
 	},
 	{
 		Path:        "/api/v1/alert",
-		Methods:     []string{http.MethodGet},
+		Methods:     []string{http.MethodPost},
 		HandlerFunc: http.HandlerFunc(ProcessAlertHandler),
 	},
 }
@@ -66,6 +66,8 @@ func LogAndRespondOKHandler(w http.ResponseWriter, r *http.Request) {
 
 func ProcessAlertHandler(w http.ResponseWriter, r *http.Request) {
 	// Retrieve the alert search results
+
+	var err error
 	searchResults, err := splunk.RetrieveSearchFromAlert(r)
 	if err != nil {
 		log.Println(err)
@@ -74,7 +76,8 @@ func ProcessAlertHandler(w http.ResponseWriter, r *http.Request) {
 		w.Write([]byte("failed alert lookup"))
 	}
 
-	user, manager, err := ldap.LookupUser(searchResults.UserName)
+	//user, manager, err := ldap.LookupUser(searchResults.UserName)
+	user, manager, err := ldap.LookupUser("chcollin")
 	if err != nil {
 		log.Println(err)
 		w.WriteHeader(http.StatusInternalServerError)
