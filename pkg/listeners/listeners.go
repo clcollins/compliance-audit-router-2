@@ -1,13 +1,14 @@
 package listeners
 
 import (
-	"io/ioutil"
 	"log"
 	"net/http"
 
 	"github.com/gorilla/mux"
 	"github.com/openshift/compliance-audit-router/pkg/config"
-	"github.com/openshift/compliance-audit-router/pkg/processor"
+	"github.com/openshift/compliance-audit-router/pkg/jira"
+	"github.com/openshift/compliance-audit-router/pkg/ldap"
+	"github.com/openshift/compliance-audit-router/pkg/splunk"
 )
 
 // Handler defines an HTTP route handler
@@ -35,7 +36,7 @@ var Listeners = []Listener{
 	},
 	{
 		Path:        "/api/v1/alert",
-		Methods:     []string{http.MethodPost},
+		Methods:     []string{http.MethodGet},
 		HandlerFunc: http.HandlerFunc(ProcessAlertHandler),
 	},
 }
@@ -57,36 +58,39 @@ func (h Handler) AddRoute(r *mux.Router) {
 	h.Route(r.NewRoute().HandlerFunc(h.Func))
 }
 
-func RequestLogger(r *http.Request) {
-	log.Println(r.RemoteAddr, r.Method, r.RequestURI)
-	if config.AppConfig.Verbose {
-		b, err := ioutil.ReadAll(r.Body)
-		if err != nil {
-			log.Println(err)
-		}
-		log.Println(string(b))
-	}
-}
-
 func LogAndRespondOKHandler(w http.ResponseWriter, r *http.Request) {
-	RequestLogger(r)
 	w.WriteHeader(http.StatusOK)
 	w.Header().Set("Content-Type", "text/plain")
 	w.Write([]byte("OK"))
 }
 
 func ProcessAlertHandler(w http.ResponseWriter, r *http.Request) {
-	RequestLogger(r)
-	err := processor.ProcessAlert(r)
+	// Retrieve the alert search results
+	searchResults, err := splunk.RetrieveSearchFromAlert(r)
 	if err != nil {
 		log.Println(err)
 		w.WriteHeader(http.StatusInternalServerError)
 		w.Header().Set("Content-Type", "text/plain")
-		w.Write([]byte("Failed to process webhook"))
-		w.Write([]byte("OK"))
-	} else {
-		w.WriteHeader(http.StatusOK)
-		w.Header().Set("Content-Type", "text/plain")
-		w.Write([]byte("Processed"))
+		w.Write([]byte("failed alert lookup"))
 	}
+
+	user, manager, err := ldap.LookupUser(searchResults.UserName)
+	if err != nil {
+		log.Println(err)
+		w.WriteHeader(http.StatusInternalServerError)
+		w.Header().Set("Content-Type", "text/plain")
+		w.Write([]byte("failed ldap lookup"))
+	}
+
+	err = jira.CreateTicket(user, manager, searchResults)
+	if err != nil {
+		log.Println(err)
+		w.WriteHeader(http.StatusInternalServerError)
+		w.Header().Set("Content-Type", "text/plain")
+		w.Write([]byte("failed ticket creation"))
+	}
+
+	w.WriteHeader(http.StatusOK)
+	w.Header().Set("Content-Type", "text/plain")
+	w.Write([]byte("ok"))
 }
