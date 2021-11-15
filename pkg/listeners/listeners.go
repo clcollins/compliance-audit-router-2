@@ -74,6 +74,7 @@ func ProcessAlertHandler(w http.ResponseWriter, r *http.Request) {
 		w.WriteHeader(http.StatusInternalServerError)
 		w.Header().Set("Content-Type", "text/plain")
 		w.Write([]byte("failed alert lookup"))
+		return
 	}
 
 	//user, manager, err := ldap.LookupUser(searchResults.UserName)
@@ -83,6 +84,7 @@ func ProcessAlertHandler(w http.ResponseWriter, r *http.Request) {
 		w.WriteHeader(http.StatusInternalServerError)
 		w.Header().Set("Content-Type", "text/plain")
 		w.Write([]byte("failed ldap lookup"))
+		return
 	}
 
 	err = jira.CreateTicket(user, manager, searchResults)
@@ -91,9 +93,11 @@ func ProcessAlertHandler(w http.ResponseWriter, r *http.Request) {
 		w.WriteHeader(http.StatusInternalServerError)
 		w.Header().Set("Content-Type", "text/plain")
 		w.Write([]byte("failed ticket creation"))
+		return
 	}
 
 	w.WriteHeader(http.StatusOK)
 	w.Header().Set("Content-Type", "text/plain")
 	w.Write([]byte("ok"))
+	return
 }
