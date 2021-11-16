@@ -16,8 +16,8 @@ limitations under the License.
 
 package jira
 
-import "github.com/openshift/compliance-audit-router/pkg/alerts"
+import "github.com/openshift/compliance-audit-router/pkg/splunk"
 
-func CreateTicket(user, manager string, searchResults alerts.Alert) error {
+func CreateTicket(user, manager string, searchResults splunk.Alert) error {
 	return nil
 }

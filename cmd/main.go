@@ -43,6 +43,7 @@ func main() {
 	log.Fatal(http.ListenAndServe(portString, r))
 }
 
+// Mux middleware to log requests in the Apache combined logging format
 func loggingMiddleware(next http.Handler) http.Handler {
 	return handlers.CombinedLoggingHandler(os.Stdout, next)
 }

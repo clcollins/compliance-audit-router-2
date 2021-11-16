@@ -21,8 +21,6 @@ import (
 	"io/ioutil"
 	"net/http"
 	"os"
-
-	"github.com/openshift/compliance-audit-router/pkg/alerts"
 )
 
 //This file includes types for un-marshalling Splunk XML responses
@@ -52,8 +50,23 @@ type Value struct {
 	Text string `xml:"text"`
 }
 
-func RetrieveSearchFromAlert(r *http.Request) (alerts.Alert, error) {
-	var alert = alerts.Alert{}
+// Alert describes a Splunk alert
+type Alert struct {
+	//  TODO: convert time strings to time.Date
+	FirstEvent string
+	LastEvent  string
+	ClusterID  string
+	UserName   string
+	Summary    string
+	SessionID  string
+	SearchID   string
+	Raw        string
+}
+
+// RetrieveSearchFromAlert parses the received webhook, and looks up the data for the alert in Splunk,
+// and returns the information in an Alert struct
+func RetrieveSearchFromAlert(r *http.Request) (Alert, error) {
+	var alert = Alert{}
 
 	// Read the body of the request, and extract the Search ID (SID)
 	// replace _ with b when we have a real webhook
