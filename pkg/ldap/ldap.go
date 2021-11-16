@@ -25,9 +25,10 @@ import (
 	"github.com/openshift/compliance-audit-router/pkg/config"
 )
 
+// LookupUser performs an LDAP query to find the user's supplemental ID and manager information
 func LookupUser(username string) (string, string, error) {
 
-	ldapAddr := config.GetLDAPAddr()
+	ldapAddr := buildLDAPAddr()
 
 	conn, err := ldap.DialURL(ldapAddr)
 	defer conn.Close()
@@ -73,4 +74,9 @@ func LookupUser(username string) (string, string, error) {
 	}
 
 	return "", "", errors.New("Not implemented")
+}
+
+// buildLDAPAddr creates the LDAP URL from the host and port provided in the config
+func buildLDAPAddr() string {
+	return config.AppConfig.LDAPConfig.Host + ":" + fmt.Sprint(config.AppConfig.LDAPConfig.Port)
 }

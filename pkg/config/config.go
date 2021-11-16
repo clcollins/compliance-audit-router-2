@@ -17,7 +17,6 @@ limitations under the License.
 package config
 
 import (
-	"fmt"
 	"log"
 	"os"
 
@@ -101,8 +100,4 @@ func init() {
 		panic(err)
 	}
 
-}
-
-func GetLDAPAddr() string {
-	return AppConfig.LDAPConfig.Host + ":" + fmt.Sprint(AppConfig.LDAPConfig.Port)
 }
