@@ -43,12 +43,12 @@ var Listeners = []Listener{
 	{
 		Path:        "/readyz",
 		Methods:     []string{http.MethodGet},
-		HandlerFunc: http.HandlerFunc(LogAndRespondOKHandler),
+		HandlerFunc: http.HandlerFunc(RespondOKHandler),
 	},
 	{
 		Path:        "/healthz",
 		Methods:     []string{http.MethodGet},
-		HandlerFunc: http.HandlerFunc(LogAndRespondOKHandler),
+		HandlerFunc: http.HandlerFunc(RespondOKHandler),
 	},
 	{
 		Path:        "/api/v1/alert",
@@ -57,6 +57,7 @@ var Listeners = []Listener{
 	},
 }
 
+// CreateListener creates a new HTTP Handler from the provided path, HTTP method, and handler function
 func CreateListener(path string, methods []string, handlerFunc http.HandlerFunc) Handler {
 	if config.AppConfig.Verbose {
 		log.Println("enabling endpoint", path, methods)
@@ -70,16 +71,19 @@ func CreateListener(path string, methods []string, handlerFunc http.HandlerFunc)
 	}
 }
 
+// AddRoute adds a new route to the router for the handler
 func (h Handler) AddRoute(r *mux.Router) {
 	h.Route(r.NewRoute().HandlerFunc(h.Func))
 }
 
-func LogAndRespondOKHandler(w http.ResponseWriter, r *http.Request) {
+// RespondOKHandler replies with a 200 OK and "OK" text to any request, for health checks
+func RespondOKHandler(w http.ResponseWriter, r *http.Request) {
 	w.WriteHeader(http.StatusOK)
 	w.Header().Set("Content-Type", "text/plain")
 	w.Write([]byte("OK"))
 }
 
+// ProcessAlertHandler is the main logic processing alerts received from Splunk
 func ProcessAlertHandler(w http.ResponseWriter, r *http.Request) {
 	// Retrieve the alert search results
 
