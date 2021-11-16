@@ -81,7 +81,7 @@ func init() {
 	viper.SetConfigType("yaml")
 	viper.SetConfigName(Appname)
 
-	viper.SetEnvPrefix("car")
+	viper.SetEnvPrefix("CAR")
 	viper.AutomaticEnv() // read in environment variables that match
 
 	err = viper.ReadInConfig() // Find and read the config file
