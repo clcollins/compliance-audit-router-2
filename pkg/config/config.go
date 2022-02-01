@@ -18,6 +18,7 @@ package config
 
 import (
 	"log"
+	"net/url"
 	"os"
 
 	"github.com/spf13/viper"
@@ -65,7 +66,7 @@ type JiraConfig struct {
 	Port          int
 	AllowInsecure bool
 	Username      string
-	Password      string
+	Token         string
 	Project       string
 }
 
@@ -100,4 +101,15 @@ func init() {
 		panic(err)
 	}
 
+	for _, x := range []*string{
+		&AppConfig.LDAPConfig.Host,
+		&AppConfig.JiraConfig.Host,
+		&AppConfig.SplunkConfig.Host,
+	} {
+		_, err := url.ParseRequestURI(*x)
+		if err != nil {
+			panic(err)
+		}
+
+	}
 }
