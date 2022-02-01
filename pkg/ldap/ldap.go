@@ -25,10 +25,44 @@ import (
 	"github.com/openshift/compliance-audit-router/pkg/config"
 )
 
+type ConnectionLayer interface {
+	Close()
+	SimpleBind(ldapAddr string) (*ldap.Conn, error)
+	Search(*ldap.SearchRequest) (*ldap.SearchResult, error)
+}
+
+// LDAPDataAccessLayer implements the ConnectionLayer for LDAP
+type LDAPDataAccessLayer struct {
+	conn    *ldap.Conn
+	address string
+}
+
+// NewLDAPDataAccessLayer creates a new LDAPAccessLayer
+func NewLDAPDataAccessLayer(address string) (*LDAPDataAccessLayer, error) {
+	conn, err := ldap.DialURL(address)
+	ldapDAL := &LDAPDataAccessLayer{
+		conn:    conn,
+		address: address,
+	}
+
+	return ldapDAL, err
+}
+
+// Close closes the connection to the LDAP server
+func (l *LDAPDataAccessLayer) Close() {
+	l.conn.Close()
+}
+
+// SimpleBind performs a simple bind to the LDAP server
+//func (l *LDAPDataAccessLayer) SimpleBind(ldapAddr string) (*ldap.Conn, error) {
+//	return l.ldap.DialURL(ldapAddr)
+//
+//}
+
 // LookupUser performs an LDAP query to find the user's supplemental ID and manager information
 func LookupUser(username string) (string, string, error) {
 
-	ldapAddr := buildLDAPAddr()
+	ldapAddr := buildLDAPAddr(config.AppConfig.LDAPConfig.Host, config.AppConfig.LDAPConfig.Port)
 
 	conn, err := ldap.DialURL(ldapAddr)
 	defer conn.Close()
@@ -43,7 +77,7 @@ func LookupUser(username string) (string, string, error) {
 		})
 		fmt.Println("DEBUG 4a")
 	} else {
-		conn.UnauthenticatedBind("")
+		err = conn.UnauthenticatedBind("")
 		fmt.Println("DEBUG 4b")
 	}
 	if err != nil {
@@ -77,6 +111,9 @@ func LookupUser(username string) (string, string, error) {
 }
 
 // buildLDAPAddr creates the LDAP URL from the host and port provided in the config
-func buildLDAPAddr() string {
-	return config.AppConfig.LDAPConfig.Host + ":" + fmt.Sprint(config.AppConfig.LDAPConfig.Port)
+func buildLDAPAddr(host string, port int) string {
+	if port != 0 {
+		return fmt.Sprintf("%s:%d", host, port)
+	}
+	return host
 }
