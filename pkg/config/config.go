@@ -46,7 +46,6 @@ type Config struct {
 
 type LDAPConfig struct {
 	Host               string
-	Port               int
 	InsecureSkipVerify bool
 	Username           string
 	Password           string
@@ -57,17 +56,14 @@ type LDAPConfig struct {
 
 type SplunkConfig struct {
 	Host          string
-	Port          int
 	AllowInsecure bool
 }
 
 type JiraConfig struct {
 	Host          string
-	Port          int
 	AllowInsecure bool
-	Username      string
 	Token         string
-	Project       string
+	Query         string
 }
 
 func init() {
@@ -106,7 +102,7 @@ func init() {
 		&AppConfig.JiraConfig.Host,
 		&AppConfig.SplunkConfig.Host,
 	} {
-		_, err := url.ParseRequestURI(*x)
+		_, err := url.Parse(*x)
 		if err != nil {
 			panic(err)
 		}

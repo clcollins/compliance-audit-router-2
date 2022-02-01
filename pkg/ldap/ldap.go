@@ -62,9 +62,7 @@ func (l *LDAPDataAccessLayer) Close() {
 // LookupUser performs an LDAP query to find the user's supplemental ID and manager information
 func LookupUser(username string) (string, string, error) {
 
-	ldapAddr := buildLDAPAddr(config.AppConfig.LDAPConfig.Host, config.AppConfig.LDAPConfig.Port)
-
-	conn, err := ldap.DialURL(ldapAddr)
+	conn, err := ldap.DialURL(config.AppConfig.LDAPConfig.Host)
 	defer conn.Close()
 	if err != nil {
 		return "", "", err
