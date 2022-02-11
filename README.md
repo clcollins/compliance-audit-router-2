@@ -24,12 +24,17 @@ ldapconfig:
     - alternateID
 
 splunkconfig:
-  host: splunk.example.org
+  host: https://splunk.example.org
   port: 8089
+  username: <username>
+  password: <password>
 
 jiraconfig:
-  host: jira.example.org
+  host: https://jira.example.org
   port: 443
+  username: <username>
+  token: <token>
+  query: <JQL to identify compliance cards>
 
 messagetemplate: |
   {{.Username}},
