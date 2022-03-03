@@ -17,40 +17,22 @@ limitations under the License.
 package splunk
 
 import (
-	"encoding/xml"
+	"crypto/tls"
+	"fmt"
 	"io/ioutil"
+	"log"
 	"net/http"
 	"os"
+
+	"github.com/openshift/compliance-audit-router/pkg/config"
+	"github.com/openshift/compliance-audit-router/pkg/helpers"
 )
 
-//This file includes types for un-marshalling Splunk XML responses
-
-// The XML response from Splunk is wrapped in a <results> tag
-type Results struct {
-	// XMLName xml.Name `xml:"results"`
-	Results []Result `xml:"result"`
-	Preview string   `xml:"preview,attr"`
-}
-
-type Result struct {
-	// XMLName xml.Name `xml:"result"`
-	Fields []Field `xml:"field"`
-	Offset string  `xml:"offset,attr"`
-}
-
-type Field struct {
-	// XMLName xml.Name `xml:"field"`
-	Value Value  `xml:"value"`
-	Key   string `xml:"k,attr"`
-	V     string `xml:"v"`
-}
-
-type Value struct {
-	// XMLName xml.Name `xml:"value"`
-	Text string `xml:"text"`
-}
-
 // Alert describes a Splunk alert
+type Link struct {
+	Href string `json:"href"`
+	Rel  string `json:"rel"`
+}
 type Alert struct {
 	//  TODO: convert time strings to time.Date
 	FirstEvent string
@@ -60,82 +42,70 @@ type Alert struct {
 	Summary    string
 	SessionID  string
 	SearchID   string
-	Raw        string
 }
 
 // RetrieveSearchFromAlert parses the received webhook, and looks up the data for the alert in Splunk,
 // and returns the information in an Alert struct
-func RetrieveSearchFromAlert(r *http.Request) (Alert, error) {
+func RetrieveSearchFromAlert(sid string) (Alert, error) {
 	var alert = Alert{}
 
-	// Read the body of the request, and extract the Search ID (SID)
-	// replace _ with b when we have a real webhook
-	_, err := ioutil.ReadAll(r.Body)
-	if err != nil {
-		return alert, err
-	}
+	alert.SearchID = sid
 
-	// TODO: Extract an SID from the response
-	alert.SearchID = "SID"
-
-	// TODO: Make an HTTP request to Splunk with the SID and retrieve the events
-	// For now,  load the XML response from a file
-	// resp, err := SOME HTTP REQUEST HERE, using the `sid` variable
-
-	// --- BEGIN TEMP ---
-	home, err := os.UserHomeDir()
-	if err != nil {
-		return alert, err
-	}
-
-	xmlFile, err := os.Open(home + "/EXAMPLE_SPLUNK_WEBHOOK")
-	defer xmlFile.Close()
-	if err != nil {
-		return alert, err
-	}
-
-	// TEMP DUMMY RESPONSE
-	resp := &http.Response{
-		StatusCode: 200,
-		Body:       ioutil.NopCloser(xmlFile),
-	}
-	// --- END TEMP ---
-
-	b, err := ioutil.ReadAll(resp.Body)
-	if err != nil {
-		return alert, err
-	}
-
-	// Process the response
-	// TODO: Can we make the un-marshalling of the XML response agnostic to any specific service?  Interfaces?
-	var search Results
-
-	err = xml.Unmarshal(b, &search)
-	if err != nil {
-		return alert, err
-	}
-
-	alert.Raw = string(b)
-
-	for _, result := range search.Results {
-		for _, field := range result.Fields {
-			switch key := field.Key; key {
-			case "firstEvent":
-				alert.FirstEvent = field.Value.Text
-			case "lastEvent":
-				alert.LastEvent = field.Value.Text
-			case "clusterid":
-				alert.ClusterID = field.Value.Text
-			case "username":
-				alert.UserName = field.Value.Text
-			case "elevated_summary":
-				alert.Summary = field.Value.Text
-			case "sessionID":
-				alert.SessionID = field.Value.Text
-			}
-
+	transport := &http.Transport{}
+	// Allow insecure connections for development
+	if config.AppConfig.SplunkConfig.AllowInsecure {
+		log.Printf("Allowing insecure connections to Splunk")
+		transport = &http.Transport{
+			TLSClientConfig: &tls.Config{
+				InsecureSkipVerify: true,
+			},
 		}
 	}
 
+	// Create a new HTTP client; don't modify the default client
+	splunkHttpClient := &http.Client{Transport: transport}
+	req, err := http.NewRequest(
+		http.MethodGet,
+		getSplunkURL(config.AppConfig.SplunkConfig.Host, sid),
+		http.NoBody,
+	)
+	if err != nil {
+		return alert, err
+	}
+
+	// REALLY, Splunk?
+	req.SetBasicAuth(
+		config.AppConfig.SplunkConfig.Username,
+		config.AppConfig.SplunkConfig.Password,
+	)
+
+	resp, err := splunkHttpClient.Do(req)
+	if err != nil {
+		return alert, err
+	}
+
+	// TODO:  PICK UP HERE - figure out how to parse the responses from Splunk in an alert-agnostic way
+	b, err := ioutil.ReadAll(resp.Body)
+	fmt.Printf(string(b))
+	os.Exit(1)
+
+	// Process the response
+	err = helpers.DecodeJSONResponseBody(resp, &alert)
+	if err != nil {
+		return alert, err
+	}
+
+	log.Printf("Received alert from Splunk: %+v", &alert)
+	// TODO: Can we make the un-marshalling of the XML response agnostic to any specific service?  Interfaces?
+	//var search Results
+
+	os.Exit(1)
 	return alert, err
+}
+
+// getSplunkURL returns the URL for a Splunk search by sid
+func getSplunkURL(host, sid string) string {
+	return fmt.Sprintf(
+		"%s/services/search/jobs/%s/summary?output_mode=json&count=0", host, sid,
+	)
 }
