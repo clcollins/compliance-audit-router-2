@@ -17,11 +17,13 @@ limitations under the License.
 package listeners
 
 import (
+	"errors"
 	"log"
 	"net/http"
 
 	"github.com/gorilla/mux"
 	"github.com/openshift/compliance-audit-router/pkg/config"
+	"github.com/openshift/compliance-audit-router/pkg/helpers"
 	"github.com/openshift/compliance-audit-router/pkg/jira"
 	"github.com/openshift/compliance-audit-router/pkg/ldap"
 	"github.com/openshift/compliance-audit-router/pkg/splunk"
@@ -83,12 +85,39 @@ func RespondOKHandler(w http.ResponseWriter, r *http.Request) {
 	w.Write([]byte("OK"))
 }
 
+type result struct {
+	Sourcetype string `json:"sourcetype"`
+	Count      string `json:"count"`
+}
+
+type webhook struct {
+	Sid          string `json:"sid"`
+	Search_name  string `json:"search_name"`
+	App          string `json:"app"`
+	Owner        string `json:"owner"`
+	Results_link string `json:"results_link"`
+	Result       result `json:"result"`
+}
+
 // ProcessAlertHandler is the main logic processing alerts received from Splunk
 func ProcessAlertHandler(w http.ResponseWriter, r *http.Request) {
 	// Retrieve the alert search results
+	var hook webhook
 
-	var err error
-	searchResults, err := splunk.RetrieveSearchFromAlert(r)
+	err := helpers.DecodeJSONRequestBody(w, r, &hook)
+	if err != nil {
+		var mr *helpers.MalformedRequest
+		if errors.As(err, &mr) {
+			http.Error(w, mr.Msg, mr.Status)
+		} else {
+			log.Println(err.Error())
+			http.Error(w, http.StatusText(http.StatusInternalServerError), http.StatusInternalServerError)
+		}
+		return
+	}
+	log.Println("Received alert from Splunk:", hook.Sid)
+
+	searchResults, err := splunk.RetrieveSearchFromAlert(hook.Sid)
 	if err != nil {
 		log.Println(err)
 		w.WriteHeader(http.StatusInternalServerError)
@@ -98,7 +127,7 @@ func ProcessAlertHandler(w http.ResponseWriter, r *http.Request) {
 	}
 
 	//user, manager, err := ldap.LookupUser(searchResults.UserName)
-	user, manager, err := ldap.LookupUser("chcollin")
+	user, manager, err := ldap.LookupUser("TODO USERNAME GOES HERE")
 	if err != nil {
 		log.Println(err)
 		w.WriteHeader(http.StatusInternalServerError)
