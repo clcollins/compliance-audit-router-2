@@ -56,6 +56,8 @@ type LDAPConfig struct {
 
 type SplunkConfig struct {
 	Host          string
+	Username      string
+	Password      string
 	AllowInsecure bool
 }
 
@@ -90,7 +92,6 @@ func init() {
 	viper.SetDefault("MessageTemplate", defaultMessageTemplate)
 	viper.SetDefault("Verbose", true)
 	viper.SetDefault("ListenPort", 8080)
-	viper.SetDefault("LDAPConfig.Port", 636)
 
 	err = viper.Unmarshal(&AppConfig)
 	if err != nil {
@@ -101,6 +102,8 @@ func init() {
 		&AppConfig.LDAPConfig.Host,
 		&AppConfig.JiraConfig.Host,
 		&AppConfig.SplunkConfig.Host,
+		&AppConfig.SplunkConfig.Username,
+		&AppConfig.SplunkConfig.Password,
 	} {
 		_, err := url.Parse(*x)
 		if err != nil {
