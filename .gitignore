@@ -1,6 +1,9 @@
 # Internal to-do task list
 TODO.md
 
+# Example Splunk Webhook
+WEBHOOK
+
 # Binaries for programs and plugins
 *.exe
 *.exe~
