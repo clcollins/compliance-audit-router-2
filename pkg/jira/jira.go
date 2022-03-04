@@ -32,7 +32,7 @@ import (
 
 const managedLabel string = "compliance-audit-router-managed"
 
-func CreateTicket(user, manager string, searchResults splunk.Alert) error {
+func CreateTicket(user, manager string, searchResults splunk.SearchResult) error {
 	return nil
 }
 

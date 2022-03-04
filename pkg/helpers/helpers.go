@@ -25,7 +25,7 @@ func (mr *MalformedRequest) Error() string {
 
 func DecodeJSONResponseBody(r *http.Response, dst interface{}) error {
 	dec := json.NewDecoder(r.Body)
-	dec.DisallowUnknownFields()
+
 	err := dec.Decode(&dst)
 	if err != nil {
 		switch {

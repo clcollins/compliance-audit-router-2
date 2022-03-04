@@ -19,7 +19,6 @@ package splunk
 import (
 	"crypto/tls"
 	"fmt"
-	"io/ioutil"
 	"log"
 	"net/http"
 	"os"
@@ -28,26 +27,49 @@ import (
 	"github.com/openshift/compliance-audit-router/pkg/helpers"
 )
 
+// Webhook is the JSON structure for a Splunk webhook
+type Webhook struct {
+	Sid         string       `json:"sid"`
+	SearchName  string       `json:"search_name"`
+	App         string       `json:"app"`
+	Owner       string       `json:"owner"`
+	ResultsLink string       `json:"results_link"`
+	Result      SearchResult `json:"result"`
+}
+
 // Alert describes a Splunk alert
-type Link struct {
-	Href string `json:"href"`
-	Rel  string `json:"rel"`
-}
 type Alert struct {
-	//  TODO: convert time strings to time.Date
-	FirstEvent string
-	LastEvent  string
-	ClusterID  string
-	UserName   string
-	Summary    string
-	SessionID  string
-	SearchID   string
+	SearchID      string
+	SearchResults SearchResults
 }
+
+// searchResult represents an actual SPLUNK search result
+type SearchResult struct {
+	Index      string `json:"index"`
+	Source     string `json:"source"`
+	SourceType string `json:"sourcetype"`
+	User       string `json:"user"`
+	Action     string `json:"action"`
+	Raw        string `json:"_raw"`
+}
+
+// searchResults represents the results of a Splunk API */results call
+type SearchResults struct {
+	InitOffset  int                 `json:"init_offset"`
+	Messages    []map[string]string `json:"messages"`
+	Preview     bool                `json:"preview"`
+	Results     []SearchResult      `json:"results"`
+	Highlighted map[string]string   `json:"highlighted"`
+	//Fields    []map[string]string `json:"fields"`
+}
+
+// NOTE: The webhook itself contains the search result. So this may not be necessary
 
 // RetrieveSearchFromAlert parses the received webhook, and looks up the data for the alert in Splunk,
 // and returns the information in an Alert struct
 func RetrieveSearchFromAlert(sid string) (Alert, error) {
 	var alert = Alert{}
+	var searchResults = SearchResults{}
 
 	alert.SearchID = sid
 
@@ -84,18 +106,19 @@ func RetrieveSearchFromAlert(sid string) (Alert, error) {
 		return alert, err
 	}
 
-	// TODO:  PICK UP HERE - figure out how to parse the responses from Splunk in an alert-agnostic way
-	b, err := ioutil.ReadAll(resp.Body)
-	fmt.Printf(string(b))
-	os.Exit(1)
-
 	// Process the response
-	err = helpers.DecodeJSONResponseBody(resp, &alert)
+	err = helpers.DecodeJSONResponseBody(resp, &searchResults)
 	if err != nil {
 		return alert, err
 	}
 
-	log.Printf("Received alert from Splunk: %+v", &alert)
+	alert.SearchResults = searchResults
+
+	log.Printf("Received alert from Splunk: %s", alert.SearchID)
+	for _, result := range alert.SearchResults.Results {
+		log.Println(result.Raw)
+	}
+
 	// TODO: Can we make the un-marshalling of the XML response agnostic to any specific service?  Interfaces?
 	//var search Results
 
@@ -106,6 +129,6 @@ func RetrieveSearchFromAlert(sid string) (Alert, error) {
 // getSplunkURL returns the URL for a Splunk search by sid
 func getSplunkURL(host, sid string) string {
 	return fmt.Sprintf(
-		"%s/services/search/jobs/%s/summary?output_mode=json&count=0", host, sid,
+		"%s/services/search/jobs/%s/results?output_mode=json&count=0", host, sid,
 	)
 }

@@ -18,8 +18,10 @@ package listeners
 
 import (
 	"errors"
+	"fmt"
 	"log"
 	"net/http"
+	"os"
 
 	"github.com/gorilla/mux"
 	"github.com/openshift/compliance-audit-router/pkg/config"
@@ -85,26 +87,12 @@ func RespondOKHandler(w http.ResponseWriter, r *http.Request) {
 	w.Write([]byte("OK"))
 }
 
-type result struct {
-	Sourcetype string `json:"sourcetype"`
-	Count      string `json:"count"`
-}
-
-type webhook struct {
-	Sid          string `json:"sid"`
-	Search_name  string `json:"search_name"`
-	App          string `json:"app"`
-	Owner        string `json:"owner"`
-	Results_link string `json:"results_link"`
-	Result       result `json:"result"`
-}
-
 // ProcessAlertHandler is the main logic processing alerts received from Splunk
 func ProcessAlertHandler(w http.ResponseWriter, r *http.Request) {
 	// Retrieve the alert search results
-	var hook webhook
+	var alert splunk.Webhook
 
-	err := helpers.DecodeJSONRequestBody(w, r, &hook)
+	err := helpers.DecodeJSONRequestBody(w, r, &alert)
 	if err != nil {
 		var mr *helpers.MalformedRequest
 		if errors.As(err, &mr) {
@@ -115,17 +103,21 @@ func ProcessAlertHandler(w http.ResponseWriter, r *http.Request) {
 		}
 		return
 	}
-	log.Println("Received alert from Splunk:", hook.Sid)
 
-	searchResults, err := splunk.RetrieveSearchFromAlert(hook.Sid)
-	if err != nil {
-		log.Println(err)
-		w.WriteHeader(http.StatusInternalServerError)
-		w.Header().Set("Content-Type", "text/plain")
-		w.Write([]byte("failed alert lookup"))
-		return
-	}
+	log.Println("Received alert from Splunk:", alert.Sid, alert.Result.Raw)
 
+	// searchResults, err := splunk.RetrieveSearchFromAlert(alert.Sid)
+	// if err != nil {
+	// 	log.Println(err)
+	// 	w.WriteHeader(http.StatusInternalServerError)
+	// 	w.Header().Set("Content-Type", "text/plain")
+	// 	w.Write([]byte("failed alert lookup"))
+	// 	return
+	// }
+
+	fmt.Printf("%+v\n", alert)
+
+	os.Exit(1)
 	//user, manager, err := ldap.LookupUser(searchResults.UserName)
 	user, manager, err := ldap.LookupUser("TODO USERNAME GOES HERE")
 	if err != nil {
@@ -136,7 +128,7 @@ func ProcessAlertHandler(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	err = jira.CreateTicket(user, manager, searchResults)
+	err = jira.CreateTicket(user, manager, alert.Result)
 	if err != nil {
 		log.Println(err)
 		w.WriteHeader(http.StatusInternalServerError)
