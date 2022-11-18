@@ -19,8 +19,6 @@ package ldap
 import (
 	"errors"
 	"fmt"
-	"log"
-
 	"github.com/go-ldap/ldap"
 	"github.com/openshift/compliance-audit-router/pkg/config"
 )
@@ -31,16 +29,16 @@ type ConnectionLayer interface {
 	Search(*ldap.SearchRequest) (*ldap.SearchResult, error)
 }
 
-// LDAPDataAccessLayer implements the ConnectionLayer for LDAP
-type LDAPDataAccessLayer struct {
+// DataAccessLayer implements the ConnectionLayer for LDAP
+type DataAccessLayer struct {
 	conn    *ldap.Conn
 	address string
 }
 
 // NewLDAPDataAccessLayer creates a new LDAPAccessLayer
-func NewLDAPDataAccessLayer(address string) (*LDAPDataAccessLayer, error) {
+func NewLDAPDataAccessLayer(address string) (*DataAccessLayer, error) {
 	conn, err := ldap.DialURL(address)
-	ldapDAL := &LDAPDataAccessLayer{
+	ldapDAL := &DataAccessLayer{
 		conn:    conn,
 		address: address,
 	}
@@ -49,7 +47,7 @@ func NewLDAPDataAccessLayer(address string) (*LDAPDataAccessLayer, error) {
 }
 
 // Close closes the connection to the LDAP server
-func (l *LDAPDataAccessLayer) Close() {
+func (l *DataAccessLayer) Close() {
 	l.conn.Close()
 }
 
@@ -73,10 +71,8 @@ func LookupUser(username string) (string, string, error) {
 			Username: config.AppConfig.LDAPConfig.Username,
 			Password: config.AppConfig.LDAPConfig.Password,
 		})
-		fmt.Println("DEBUG 4a")
 	} else {
 		err = conn.UnauthenticatedBind("")
-		fmt.Println("DEBUG 4b")
 	}
 	if err != nil {
 		return "", "", err
@@ -90,28 +86,41 @@ func LookupUser(username string) (string, string, error) {
 	if err != nil {
 		return "", "", err
 	}
-	fmt.Println("DEBUG 6")
+
+	var ldapUsername string
+	var ldapManager string
 
 	if len(result.Entries) == 0 {
 		return "", "", errors.New("User not found")
+	} else if len(result.Entries) > 1 {
+		return "", "", errors.New("multiple ldap entries found, please check your ldap config")
 	} else {
-		for _, entry := range result.Entries {
-			for _, attribute := range entry.Attributes {
-				if len(attribute.Values) > 1 {
-					log.Printf("multiple attributes found for user %s: %s - using the first (%s)",
-						username, attribute.Name, attribute.Values)
-				}
-			}
+		entry := result.Entries[0]
+
+		ldapUsername, err = getUID(entry.DN)
+		if err != nil {
+			return "", "", errors.New("could not parse ldap username")
+		}
+		ldapManager, err = getUID(entry.GetAttributeValue("manager"))
+		if err != nil {
+			return "", "", errors.New("could not parse manager's ldap username")
 		}
 	}
 
-	return "", "", errors.New("Not implemented")
+	return ldapUsername, ldapManager, nil
 }
 
-// buildLDAPAddr creates the LDAP URL from the host and port provided in the config
-func buildLDAPAddr(host string, port int) string {
-	if port != 0 {
-		return fmt.Sprintf("%s:%d", host, port)
+func getUID(dn string) (string, error) {
+	parsedDN, err := ldap.ParseDN(dn)
+	if err != nil {
+		return "", errors.New(fmt.Sprintf("error parsing dn: %v", err))
 	}
-	return host
+	for _, rdn := range parsedDN.RDNs {
+		for _, attribute := range rdn.Attributes {
+			if attribute.Type == "uid" {
+				return attribute.Value, nil
+			}
+		}
+	}
+	return "", errors.New("no uid field found for given ldap string")
 }
