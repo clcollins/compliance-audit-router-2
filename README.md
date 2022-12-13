@@ -27,6 +27,7 @@ splunkconfig:
   host: https://splunk.example.org:8089
   username: <username>
   password: <password>
+  allowinsecure: false
 
 jiraconfig:
   host: https://jira.example.org:443
