@@ -1,3 +1,5 @@
+#This repository is archived and will no longer receive updates.
+
 # compliance-audit-router
 
 A tool to receive compliance alert webhooks from an external source (eg. Splunk), look up the responsible engineer's information (eg. from LDAP), and create a compliance report ticket (eg. Jira) assigned to the engineer for follow-up.
